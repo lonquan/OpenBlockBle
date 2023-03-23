@@ -71,12 +71,6 @@ export default {
           }
         })
       })
-
-      setTimeout(_ => {
-        this.stopBluetoothDevicesDiscovery()
-        uni.hideLoading()
-        this.inDiscovery = false
-      }, 1000 * 3)
     },
 
     startBluetoothDevicesDiscovery() {
@@ -86,6 +80,13 @@ export default {
       uni.startBluetoothDevicesDiscovery({
         allowDuplicatesKey: false,
       })
+      
+      
+      setTimeout(_ => {
+        this.stopBluetoothDevicesDiscovery()
+        uni.hideLoading()
+        this.inDiscovery = false
+      }, 1000 * 5)
     },
 
     openBluetoothAdapter() {
