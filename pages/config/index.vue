@@ -18,7 +18,7 @@
             <span class="mark"></span>
             <span class="pl-1">可连接 WiFi </span>
           </div>
-          <div class="btn" @click="handleRefresh">刷新</div>
+          <div class="btn" @click="getWifi">刷新</div>
         </div>
 
         <div class="derives">
@@ -26,7 +26,14 @@
             正在获取 WiFi
           </div>
           <div class="item" v-for="d in wifi" :key="d.name">
-            <div>{{ d.name }}</div>
+            <div class="wifi-name">
+              <div class="signal-icon icon-1" v-if="d.signalStrength < 21"></div>
+              <div class="signal-icon icon-2" v-else-if="d.signalStrength < 41"></div>
+              <div class="signal-icon icon-3" v-else-if="d.signalStrength < 61"></div>
+              <div class="signal-icon icon-4" v-else-if="d.signalStrength < 81"></div>
+              <div class="signal-icon icon-5" v-else-if="d.signalStrength < 101"></div>
+              <div>{{ d.name }}</div>
+            </div>
             <div class="btn" @click="handleToConfig(d)">连接</div>
           </div>
         </div>
@@ -47,6 +54,7 @@ export default {
       readCharacteristicId: null,
       notifyCharacteristicId: null,
       wifi: [],
+      wifiPack: '',
       errMsg: null,
       lastCommand: null,
     }
@@ -59,7 +67,9 @@ export default {
   },
 
   onUnload() {
-    wx.closeBLEConnection({ deviceId: this.deviceName, })
+    wx.closeBLEConnection({
+      deviceId: this.deviceName,
+    })
   },
 
   methods: {
@@ -71,19 +81,46 @@ export default {
         success: res => {
           if (res.confirm && res.content) {
             if (res.content.length >= 8) {
-              uni.showLoading({ title: '设备尝试连接 WiFi', mask: true })
+              uni.showLoading({
+                title: '设备尝试连接 WiFi',
+                mask: true
+              })
               return this.sendDataToDevice(`#2${wifi.name}:${res.content}`)
             }
 
-            uni.showToast({ title: '密码长度不符合', icon: 'none' })
+            uni.showToast({
+              title: '密码长度不符合',
+              icon: 'none'
+            })
           }
         }
       })
     },
 
-    handleRefresh() {
-      uni.showToast({ title: '获取中', icon: 'loading', duration: 3000 })
+    getWifi() {
+      this.wifi = []
+      this.wifiPack = ''
+
+      uni.showToast({
+        title: '获取中',
+        icon: 'loading',
+        duration: 3000
+      })
+
       this.sendDataToDevice('#1')
+
+      setTimeout(_ => {
+        let wifi = this.wifiPack.split('\n')
+        this.wifi = wifi.map(w => {
+          let [ssid, signalStrength] = w.split(':')
+          return {
+            name: ssid,
+            signalStrength: parseInt(signalStrength || 0)
+          }
+        })
+            .filter(w => w.signalStrength)
+            .sort((a, b) => b.signalStrength - a.signalStrength)
+      }, 3000)
     },
 
     sendDataToDevice(data) {
@@ -110,19 +147,6 @@ export default {
       })
     },
 
-    readBLECharacteristicValue() {
-      this.onBLECharacteristicValueChange()
-
-      wx.readBLECharacteristicValue({
-        deviceId: this.deviceId,
-        serviceId: this.serviceId,
-        characteristicId: this.readCharacteristicId,
-        success(res) {
-          console.log('readBLECharacteristicValue:', res.errCode)
-        }
-      })
-    },
-
     onBLECharacteristicValueChange() {
       wx.notifyBLECharacteristicValueChange({
         deviceId: this.deviceId,
@@ -138,13 +162,8 @@ export default {
         console.log('resp', msg)
 
         if (this.lastCommand === '#1') {
-          let wifi = msg.split('\n')
-          this.wifi = wifi.map(w => {
-            let [ssid, signalStrength] = w.split(':')
-            return { name: ssid, signalStrength: parseInt(signalStrength || 0) }
-          })
-              .filter(w => w.signalStrength)
-              .sort((a, b) => a.signalStrength - b.signalStrength)
+          this.wifiPack = `${this.wifiPack}${msg}`
+          return
         }
 
         if (this.lastCommand.startsWith('#2')) {
@@ -174,7 +193,11 @@ export default {
         serviceId: this.serviceId,
         success: res => {
           res.characteristics.forEach(c => {
-            let { write, notify, read } = c.properties
+            let {
+              write,
+              notify,
+              read
+            } = c.properties
             write && notify && (this.notifyCharacteristicId = c.uuid)
             write && !notify && (this.writeCharacteristicId = c.uuid)
             notify && read && (this.readCharacteristicId = c.uuid)
@@ -182,11 +205,11 @@ export default {
 
           // 特征值变化监听
           this.onBLECharacteristicValueChange()
+          uni.hideLoading()
 
           setTimeout(_ => {
-            uni.hideLoading()
             // 获取一次 WiFi
-            this.sendDataToDevice('#1')
+            this.getWifi()
           }, 500)
 
         },
@@ -213,7 +236,9 @@ export default {
     },
 
     connectToDevice() {
-      uni.showLoading({ title: '设备连接中' })
+      uni.showLoading({
+        title: '设备连接中'
+      })
 
       wx.createBLEConnection({
         deviceId: this.deviceId,
@@ -230,6 +255,39 @@ export default {
 }
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+.wifi-name {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
 
+.signal-icon {
+  // 73 60
+  width: 18px;
+  height: 12px;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  margin-right: 5px;
+}
+
+.icon-1 {
+  background-image: url('../../static/1.png');
+}
+
+.icon-2 {
+  background-image: url('../../static/2.png');
+}
+
+.icon-3 {
+  background-image: url('../../static/3.png');
+}
+
+.icon-4 {
+  background-image: url('../../static/4.png');
+}
+
+.icon-5 {
+  background-image: url('../../static/5.png');
+}
 </style>
