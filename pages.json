@@ -11,6 +11,12 @@
       "style": {
         "navigationBarTitleText": "设备 WiFi 配置"
       }
+    },
+    {
+      "path": "pages/web/index",
+      "style": {
+        "navigationBarTitleText": "在线帮助"
+      }
     }
   ],
   "globalStyle": {
