@@ -23,9 +23,12 @@
     </view>
 
     <view class="card">
-      <div class="tit">
-        <span class="mark"></span>
-        <span>使用须知</span>
+      <div class="card-group">
+        <div class="tit">
+          <span class="mark"></span>
+          <span class="pl-1">使用须知</span>
+        </div>
+        <div class="btn" @click="handleToWeb">在线文档</div>
       </div>
       <div class="text-sm" style="padding-top: 10px;">
         <p>1. 需开启手机蓝牙，部分安卓设备需要授予微信定位权限才可搜索到设备</p>
@@ -52,6 +55,12 @@ export default {
   },
 
   methods: {
+    handleToWeb() {
+      uni.navigateTo({
+        url: `/pages/web/index`
+      })
+    },
+
     handleToConfig(device) {
       uni.navigateTo({
         url: `/pages/config/index?id=${device.deviceId}&name=${encodeURIComponent(device.name)}`
@@ -80,8 +89,8 @@ export default {
       uni.startBluetoothDevicesDiscovery({
         allowDuplicatesKey: false,
       })
-      
-      
+
+
       setTimeout(_ => {
         this.stopBluetoothDevicesDiscovery()
         uni.hideLoading()
